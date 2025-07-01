@@ -72,6 +72,13 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Button 
+                asChild
+                variant="outline" 
+                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              >
+                <a href="/admin">Admin</a>
+              </Button>
               <Badge variant="outline" className="border-emerald-500/50 text-emerald-400">
                 <Zap className="h-3 w-3 mr-1" />
                 Online
