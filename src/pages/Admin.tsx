@@ -5,9 +5,36 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
+import AntennaModal from '@/components/AntennaModal';
+import BookingManagementModal from '@/components/BookingManagementModal';
+
+interface Antenna {
+  id: number;
+  name: string;
+  type: string;
+  frequency: string;
+  location: string;
+  status: string;
+  description: string;
+  features: string[];
+  lastMaintenance: string;
+}
+
+interface Booking {
+  id: number;
+  antennaName: string;
+  user: string;
+  date: string;
+  time: string;
+  purpose: string;
+  status: string;
+  notes?: string;
+}
 
 const Admin = () => {
-  const [antennas] = useState([
+  const { toast } = useToast();
+  const [antennas, setAntennas] = useState<Antenna[]>([
     {
       id: 1,
       name: "Aurora Array Alpha",
@@ -15,6 +42,8 @@ const Admin = () => {
       frequency: "1-30 MHz",
       location: "North Chamber",
       status: "available",
+      description: "Primary HF antenna system for long-range communications",
+      features: ["360° Rotation", "Auto-tracking", "Weather Resistant"],
       lastMaintenance: "2024-06-15"
     },
     {
@@ -24,6 +53,8 @@ const Admin = () => {
       frequency: "300-3000 MHz",
       location: "East Chamber",
       status: "occupied",
+      description: "Advanced UHF system for satellite communications",
+      features: ["Dual Polarization", "Low Noise", "High Gain"],
       lastMaintenance: "2024-06-10"
     },
     {
@@ -33,11 +64,13 @@ const Admin = () => {
       frequency: "30-300 MHz",
       location: "West Chamber",
       status: "available",
+      description: "Versatile VHF antenna for research and testing",
+      features: ["Multi-band", "Remote Control", "Data Logging"],
       lastMaintenance: "2024-06-20"
     }
   ]);
 
-  const [bookings] = useState([
+  const [bookings, setBookings] = useState<Booking[]>([
     {
       id: 1,
       antennaName: "Aurora Array Alpha",
@@ -57,6 +90,73 @@ const Admin = () => {
       status: "pending"
     }
   ]);
+
+  // Modal states
+  const [isAntennaModalOpen, setIsAntennaModalOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedAntenna, setSelectedAntenna] = useState<Antenna | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  // Antenna management functions
+  const handleAddAntenna = () => {
+    setSelectedAntenna(null);
+    setIsAntennaModalOpen(true);
+  };
+
+  const handleEditAntenna = (antenna: Antenna) => {
+    setSelectedAntenna(antenna);
+    setIsAntennaModalOpen(true);
+  };
+
+  const handleDeleteAntenna = (antennaId: number) => {
+    setAntennas(prev => prev.filter(a => a.id !== antennaId));
+    toast({
+      title: "Success",
+      description: "Antenna deleted successfully.",
+    });
+  };
+
+  const handleSaveAntenna = (antennaData: Omit<Antenna, 'id'> & { id?: number }) => {
+    if (antennaData.id) {
+      // Update existing antenna
+      setAntennas(prev => prev.map(a => 
+        a.id === antennaData.id ? { ...antennaData, id: antennaData.id } : a
+      ));
+    } else {
+      // Add new antenna
+      const newId = Math.max(...antennas.map(a => a.id)) + 1;
+      setAntennas(prev => [...prev, { ...antennaData, id: newId }]);
+    }
+  };
+
+  // Booking management functions
+  const handleEditBooking = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleApproveBooking = (bookingId: number) => {
+    setBookings(prev => prev.map(b => 
+      b.id === bookingId ? { ...b, status: 'confirmed' } : b
+    ));
+  };
+
+  const handleRejectBooking = (bookingId: number) => {
+    setBookings(prev => prev.map(b => 
+      b.id === bookingId ? { ...b, status: 'rejected' } : b
+    ));
+  };
+
+  const handleUpdateBooking = (updatedBooking: Booking) => {
+    setBookings(prev => prev.map(b => 
+      b.id === updatedBooking.id ? updatedBooking : b
+    ));
+  };
+
+  // Calculate stats
+  const availableAntennas = antennas.filter(a => a.status === 'available').length;
+  const pendingBookings = bookings.filter(b => b.status === 'pending').length;
+  const totalBookings = bookings.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -104,8 +204,8 @@ const Admin = () => {
               <CardTitle className="text-sm font-medium text-slate-400">Total Chambers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">3</div>
-              <p className="text-xs text-emerald-400">All operational</p>
+              <div className="text-2xl font-bold text-white">{antennas.length}</div>
+              <p className="text-xs text-emerald-400">{availableAntennas} available</p>
             </CardContent>
           </Card>
           
@@ -114,8 +214,8 @@ const Admin = () => {
               <CardTitle className="text-sm font-medium text-slate-400">Active Bookings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">2</div>
-              <p className="text-xs text-blue-400">1 pending review</p>
+              <div className="text-2xl font-bold text-white">{totalBookings}</div>
+              <p className="text-xs text-blue-400">{pendingBookings} pending review</p>
             </CardContent>
           </Card>
           
@@ -153,7 +253,10 @@ const Admin = () => {
                   Manage antenna chambers and their configurations
                 </CardDescription>
               </div>
-              <Button className="bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-600 hover:to-blue-600">
+              <Button 
+                onClick={handleAddAntenna}
+                className="bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-600 hover:to-blue-600"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Antenna
               </Button>
@@ -194,10 +297,20 @@ const Admin = () => {
                     <TableCell className="text-slate-300">{antenna.lastMaintenance}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditAntenna(antenna)}
+                          className="border-slate-600 text-slate-300"
+                        >
                           <Edit className="h-3 w-3" />
                         </Button>
-                        <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleDeleteAntenna(antenna.id)}
+                          className="border-slate-600 text-slate-300"
+                        >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -262,12 +375,18 @@ const Admin = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditBooking(booking)}
+                          className="border-slate-600 text-slate-300"
+                        >
                           <Edit className="h-3 w-3" />
                         </Button>
                         {booking.status === 'pending' && (
                           <Button 
-                            size="sm" 
+                            size="sm"
+                            onClick={() => handleApproveBooking(booking.id)}
                             className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30"
                           >
                             Approve
@@ -282,6 +401,23 @@ const Admin = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modals */}
+      <AntennaModal
+        isOpen={isAntennaModalOpen}
+        onClose={() => setIsAntennaModalOpen(false)}
+        antenna={selectedAntenna}
+        onSave={handleSaveAntenna}
+      />
+
+      <BookingManagementModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        booking={selectedBooking}
+        onUpdate={handleUpdateBooking}
+        onApprove={handleApproveBooking}
+        onReject={handleRejectBooking}
+      />
     </div>
   );
 };
